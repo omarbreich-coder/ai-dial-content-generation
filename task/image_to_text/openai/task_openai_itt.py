@@ -1,10 +1,17 @@
 import base64
+from email import message
 from pathlib import Path
+from pydoc import text
 
 from task._utils.constants import API_KEY, DIAL_CHAT_COMPLETIONS_ENDPOINT
 from task._utils.model_client import DialModelClient
 from task._models.role import Role
-from task.image_to_text.openai.message import ContentedMessage, TxtContent, ImgContent, ImgUrl
+from task.image_to_text.openai.message import (
+    ContentedMessage,
+    TxtContent,
+    ImgContent,
+    ImgUrl,
+)
 
 
 def start() -> None:
@@ -13,7 +20,7 @@ def start() -> None:
 
     with open(image_path, "rb") as image_file:
         image_bytes = image_file.read()
-    base64_image = base64.b64encode(image_bytes).decode('utf-8')
+    base64_image = base64.b64encode(image_bytes).decode("utf-8")
 
     # TODO:
     #  1. Create DialModelClient
@@ -25,7 +32,38 @@ def start() -> None:
     #        Specification but since requests are going to the DIAL Core, we can use different models and DIAL Core
     #        will adapt them to format Gemini or Anthropic is using. In case if we go directly to
     #        the https://api.anthropic.com/v1/complete we need to follow Anthropic request Specification (the same for gemini)
-    raise NotImplementedError
+    # raise NotImplementedError
+    client = DialModelClient(
+        endpoint=DIAL_CHAT_COMPLETIONS_ENDPOINT,
+        deployment_name="gpt-4o",
+        api_key=API_KEY,
+    )
+
+    data_url = f"data:image/png;base64,{base64_image}"
+
+    message = ContentedMessage(
+        role=Role.USER,
+        content=[
+            TxtContent(text="Analyze this image and describe what you see."),
+            ImgContent(image_url=ImgUrl(url=data_url)),
+        ],
+    )
+
+    response = client.get_completion([message])
+
+    url_message = ContentedMessage(
+        role=Role.USER,
+        content=[
+            TxtContent(text="Analyze this image and describe what you see."),
+            ImgContent(
+                image_url=ImgUrl(
+                    url="https://a-z-animals.com/media/2019/11/Elephant-male-1024x535.jpg"
+                )
+            ),
+        ],
+    )
+
+    url_response = client.get_completion([url_message])
 
 
 start()
